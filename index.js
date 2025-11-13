@@ -7,7 +7,10 @@ const port = process.env.PORT || 5000;
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./admin-key.json");
+const decoded = Buffer.from(process.env.FIREBASE_TOKEN, "base64").toString(
+  "utf8"
+);
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -22,6 +25,7 @@ const verifyToken = async(req,res,next)=>{
       return res.status(401).send({message:"UnAuthorized Access"})
    } 
    const token = req.headers.authorization.split(' ')[1]
+   console.log(token)
     try {
       
       const userInfo =  await admin.auth().verifyIdToken(token);
@@ -72,13 +76,10 @@ async function run() {
         const result = await issuesColl.findOne(query);
         res.send(result);
       });
-      app.get("/issues",verifyToken, async (req, res) => {
+      app.get("/issues", async (req, res) => {
         const email = req.query.email;
         const query = {};
         if (email) {
-          if (email !== req.token_owner) {
-            return res.status(403).send({ message: "Forbidden Access" });
-          }
           query.email = email;
         }
         const cursor = issuesColl.find(query);
